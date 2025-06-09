@@ -1,0 +1,104 @@
+@techreport{Asanović:EECS-2016-17,
+    Author= {Asanović, Krste and Avizienis, Rimas and Bachrach, Jonathan and Beamer, Scott and Biancolin, David and Celio, Christopher and Cook, Henry and Dabbelt, Daniel and Hauser, John and Izraelevitz, Adam and Karandikar, Sagar and Keller, Ben and Kim, Donggyu and Koenig, John and Lee, Yunsup and Love, Eric and Maas, Martin and Magyar, Albert and Mao, Howard and Moreto, Miquel and Ou, Albert and Patterson, David A. and Richards, Brian and Schmidt, Colin and Twigg, Stephen and Vo, Huy and Waterman, Andrew},
+    Title= {The Rocket Chip Generator},
+    Year= {2016},
+    Month= {Apr},
+    Url= {http://www2.eecs.berkeley.edu/Pubs/TechRpts/2016/EECS-2016-17.html},
+    Number= {UCB/EECS-2016-17},
+    Abstract= {Rocket Chip is an open-source Sysem-on-Chip design generator that emits synthesizable RTL. It leverages the Chisel hardware construction language to compose a library of sophisticated generators for cores, caches, and interconnects into an integrated SoC. Rocket Chip generates general-purpose processor cores that use the open RISC-V ISA, and provides both an in-order core generator (Rocket) and an out-of-order core generator (BOOM). For SoC designers interested in utilizing heterogeneous specialization for added efficiency gains, Rocket Chip supports the integration of custom accelerators in the form of instruction set extensions, coprocessors, or fully independent novel cores. Rocket Chip has been taped out (manufactured) eleven times, and yielded functional silicon prototypes capable of booting Linux.},
+    institution={University of California at Berkeley},
+}
+
+@article{boom,
+  title={SonicBOOM: The 3rd Generation Berkeley Out-of-Order Machine},
+  author={Zhao, Jerry and Korpan, Ben and Gonzalez, Abraham and Asanovic, Krste},
+  booktitle={Fourth Workshop on Computer Architecture Research with RISC-V},
+  year={2020},
+  month={May}
+}
+
+@Online{berkeley-hardfloat,
+  author =    {{ucb-bar}},
+  title =        {Berkeley-Hardfloat},
+  year = {2024},
+  month = {Jun},
+  organization = {{UCB-BAR}},
+  url =       {https://github.com/ucb-bar/berkeley-hardfloat},
+  urldate =   {2025-01-20}}
+
+@Manual{riscv-isa,
+  editor =    {Waterman, Andrew and Asanović, Krste},
+  title =        {The RISC-V Instruction Set Manual, Volume I: User-Level ISA},
+  year = {2016},
+  month = {Apr},
+  version =   {20191214-draft},
+  organization = {{RISC-V} Foundation},
+  url =       {http://www2.eecs.berkeley.edu/Pubs/TechRpts/2016/EECS-2016-17.html},
+  urldate =   {2024-12-30}}
+
+@Manual{riscv-priv,
+  editor =    {Waterman, Andrew and Asanović, Krste},
+  title =        {The RISC-V Instruction Set Manual, Volume II: Privileged Architecture},
+  year = {2016},
+  month = {Apr},
+  version =   {20191214-draft},
+  organization = {{RISC-V} Foundation},
+  urldate =   {2024-12-30}}
+
+% https://stackoverflow.com/questions/71988282/why-user-mode-interrupt-was-introduced-in-risc-v
+% https://github.com/riscv/riscv-isa-manual/blob/89184f938603eae990af27c3431397da31c07479/src/n.tex
+@Manual{riscv-n-ext,
+  editor =    {Waterman, Andrew and Asanović, Krste},
+  title =        {The RISC-V Instruction Set Manual, Volume I: User-Level ISA},
+  year = {2016},
+  month = {Apr},
+  version =   {1.11},
+  organization = {{RISC-V} Foundation},
+}
+
+@inproceedings{firesim,
+ author = {Karandikar, Sagar and Mao, Howard and Kim, Donggyu and Biancolin, David and Amid, Alon and Lee, Dayeol and Pemberton, Nathan and Amaro, Emmanuel and Schmidt, Colin and Chopra, Aditya and Huang, Qijing and Kovacs, Kyle and Nikolic, Borivoje and Katz, Randy and Bachrach, Jonathan and Asanovi\'{c}, Krste},
+ title = {{FireSim}: {FPGA}-accelerated Cycle-exact Scale-out System Simulation in the Public Cloud},
+ booktitle = {Proceedings of the 45th Annual International Symposium on Computer Architecture},
+ series = {ISCA '18},
+ year = {2018},
+ isbn = {9781538659847},
+ pages = {29--42},
+ numpages = {14},
+ url = {https://doi.org/10.1109/ISCA.2018.00014},
+ doi = {10.1109/ISCA.2018.00014},
+ acmid = {3276543},
+ publisher = {IEEE Press},
+ address = {Piscataway, NJ, USA},
+ keywords = {computer architecture, computer networks, computer simulation, data centers, distributed computing, field programmable gate arrays, performance analysis, scalability},
+}
+
+@Misc{xvcu118,
+  author =    {{AMD} Xilinx},
+  title =     {{AMD} Virtex UltraScale+ {FPGA} {VCU118} Evaluation Kit},
+  url =          {https://www.xilinx.com/products/boards-and-kits/vcu118.html},
+}
+
+@article{chipyard,
+  author={Amid, Alon and Biancolin, David and Gonzalez, Abraham and Grubb, Daniel and Karandikar, Sagar and Liew, Harrison and Magyar,   Albert and Mao, Howard and Ou, Albert and Pemberton, Nathan and Rigge, Paul and Schmidt, Colin and Wright, John and Zhao, Jerry and Shao, Yakun Sophia and Asanovi\'{c}, Krste and Nikoli\'{c}, Borivoje},
+  journal={IEEE Micro},
+  title={Chipyard: Integrated Design, Simulation, and Implementation Framework for Custom SoCs},
+  year={2020},
+  volume={40},
+  number={4},
+  pages={10-21},
+  doi={10.1109/MM.2020.2996616},
+  ISSN={1937-4143},
+}
+
+@misc{verilator,
+	title = {Verilator},
+	copyright = {LGPL-3.0},
+	url = {https://github.com/verilator/verilator},
+	abstract = {Verilator open-source SystemVerilog simulator and lint system},
+	urldate = {2024-12-10},
+	author = {Snyder, Wilson and Wasson, Paul and Galbi, Duane and {et al}},
+	month = dec,
+	year = {2024},
+	note = {original-date: 2019-06-13T22:38:59Z},
+}
