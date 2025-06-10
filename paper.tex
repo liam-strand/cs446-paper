@@ -155,8 +155,8 @@
 		DIV_F -> F_TO_I [headlabel="0 "]
 		F_TO_I -> "OUT_I(0)" [headlabel="0 "];
 		}
-		\label{fig:teaser}
 		\caption{The abstract representation of a VIR operator dataflow subgraph that can now be lowered to hardware.}
+		\label{fig:teaser}
 	\end{center}
 \end{teaserfigure}
 
@@ -254,11 +254,23 @@ This explicit representation of data movement is much easier to translate into a
 
 Figure~\ref{fig:vir-sample} contains many operations that are dependent upon oneanother.
 We see, for example, that \texttt{vcode\_div\_float} on line 7 must wait for \texttt{vcode\_int\_to\_float}, and so on all the way back to the \texttt{vcode\_not\_bool} and \texttt{vcode\_add\_int} on lines 1 and 2, which have no dependencies.
-For a graphical representation of these dependencies, see figure~\ref{fig:teaser}.
+For a graphical representation of these dependencies, see Figure~\ref{fig:teaser}.
 
 VIR is a representation that is significantly closer to the physical structure of a hardware circuit, which greatly simplifies the task of synthesizing the high-level algorithm into hardware.
 
 \subsection{Chisel}
+
+To perform that synthesis, we rely on Chisel \cite{chisel}, a new hardware description language embedded in Scala.
+Chisel code takes the form of \emph{generators}, which are Scala classes that can be envoked by the Chisel compiler to generate a specific instance of a hardware module.
+Generators can take parameters and, since this is Scala, they are highly composable using both object-oriented and functional programming paradigms.
+
+During compilation, the Scala code is executed to generate the circuit in an intermediate representation called FIRRTL (Flexible Intermediate Representation for RTL).
+This FIRRTL representation is then passed to a separate compiler which performs hardware-specific optimizations before emitting a final, low-level hardware description such as Verilog.
+
+Chisel has been used to build many complex hardware projects, including high-performance RISC-V cores like the in-order Rocket \cite{rocket-core} and the out-of-order SonicBOOM \cite{boom-core}.
+Moreover, Chisel is the foundation of the Chipyard \cite{chipyard} framework for SoC design, simulation, and synthesis.
+
+In this work, Chisel is used to map VIR nodes to hardware functional units, wire up the connections between those functional units, and wrap the graph of functional units in an interface that can be accessed as a discrete accelerator from the outside world.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
