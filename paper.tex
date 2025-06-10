@@ -5,6 +5,8 @@
 \usepackage{xcolor}
 \usepackage[pdf, tmpdir]{graphviz}
 
+\NewDocumentCommand{\ltrs}{m}{\textbf{\textcolor{blue}{LTRS:~#1}}}
+
 \acmConference[WLSD 2025]{Workshop on Low-level Software Development}{June 13, 2025}{Evanston, IL}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -180,25 +182,29 @@ In this work, we intercept the compilation process at the VIR stage, and instead
 
 \subsubsection{NESL}
 
-Designed in 1992 and implemented in 1996, NESL is a high-level parallel language that uses the nested data parallelism model of computation.
+Designed in 1992 and implemented in 1996, NESL \cite{BLELLOCH-NESL-JPDC94, BLELLOCH-NSEL-ICFP96} is a high-level parallel language that uses the nested data parallelism model of computation.
 This model allows programmers to express the parallelism of their algorithms in terms of applying a function in parallel to a set of values, where those values could themselves be parallel functions.
 It is very flexible and allows the programmer to express all of the parallelism available in their algorithm.
+
+NESL is essentially just Standard ML with a sprinkling of parallelism.
+There is a parallel map/filter operator and collection types for that operator to consume.
+Recursion semantics are also updated to allow for parallel recursive calls.
 
 \begin{figure}
 	\begin{center}
 		\begin{lstlisting}[language=NESL]
 function qsort(a) =
   if (#a < 2) then a
-  else
-    let pivot  = a[#a/2];
-        lesser = {e in a | e < pivot};
-        equal  = {e in a | e == pivot};
-        greater= {e in a | e > pivot};
-        result = {qsort(v): v in [lesser,greater]}
-    in result[0] ++ equal ++ result[1];
+  else let 
+  	pivot   = a[#a/2];
+    lesser  = {e in a | e < pivot};
+    equal   = {e in a | e == pivot};
+    greater = {e in a | e > pivot};
+    result  = {qsort(v) : v in [lesser, greater]}
+  in result[0] ++ equal ++ result[1];
 		\end{lstlisting}
 	\end{center}
-	\caption{A NESL implementation of quicksort, exposing the parallelism of the scan over \texttt{a} and the parallel recursive calls to \texttt{qsort}.}\label{fig:nesl-sample}
+		\caption{A NESL implementation of quicksort, exposing the parallelism of the scan over the collection \texttt{a} and the parallel recursive calls to \texttt{qsort}.}\label{fig:nesl-sample}
 \end{figure}
 
 Figure~\ref{fig:nesl-sample} contains the NESL implementation of quicksort, a classic parallel algorithm.
@@ -206,12 +212,51 @@ Lines 5-7 express flat data parallelism, with each line applying a filter to the
 Line 8 shows the recursive calls over the two subcollections, which can be executed in parallel.
 A flat data parallel language would struggle to reveal the parallelism available in quicksort so succinctly and clearly.
 
-
 \subsubsection{VCODE}
 
+\ltrs{need to do a language pass on this section}
+Since NESL would be far too complex to execute directly at any speed, it is first lowered to VCODE.
+This lowering process flattens nested parallelism into flat parallelism over segmented vectors.
+This means that parallel recursive calls to parts of a collection, as in line 8 of figure~\ref{fig:nesl-sample}, are reduced to a single call.
+Although this flattening simplifies the implementation of a VCODE interpreter, it is still able to represent nearly all of the parallelism available in the original NESL program.
+Moreover, VCODE relies on a (relatively) small set of instructions that operate on a logical stack of segmented vectors, further simplifying an implementation.
 
+Translating a stack-based intermediate representation such as VCODE into a hardware design would be a monumental task.
+Fortunately, prior work allows VCODE to be translated to another intermediate representation that is much more ammenable to lowering to hardware.
 
 \subsubsection{VIR}
+
+A good candiate intermediate representation for hardware synthesis would feature both relatively simple operations and a dataflow representation of the connections between operations.
+VIR is a vector dataflow intermediate representation that uses instructions nearly indentical to those of VCODE.
+There is no stack of vectors, no global state, just a dataflow graph connecting inputs to outputs.
+The textual version of VIR appears to be a sequential single-static-assignment program, but the backing representation is of a true dependency graph between operators.
+
+\begin{figure}
+	\begin{center}
+		\begin{lstlisting}[]
+(%V1) = vcode_not_bool(%A2)
+(%V2) = vcode_add_int(%A0, %A1)
+(%V3) = vcode_bool_to_int(%V1)
+(%V4) = vcode_not_int(%V2)
+(%V5) = vcode_mul_int(%V3, %V4)
+(%V6) = vcode_int_to_float(%V5)
+(%V7) = vcode_div_float(%V6, %A3)
+(%V8) = vcode_float_to_int(%V7)
+		\end{lstlisting}
+	\end{center}
+		\caption{A simple VIR program that includes all three datatypes, and unary and binary operators.}\label{fig:vir-sample}
+\end{figure}
+
+A dataflow graph representation is very helpful for hardware synthesis because it makes the dependencies between operations explicit.
+In hardware design, computations are performed by physical functional units (like adders and multipliers) that are wired together.
+A dataflow graph serves as a direct blueprint for these connections, mapping how the output of one operation feeds into the input of another.
+This explicit representation of data movement is much easier to translate into a physical circuit than a stack-based representation like VCODE, where dependencies are implicit in the order of push and pop operations on a shared stack.
+
+Figure~\ref{fig:vir-sample} contains many operations that are dependent upon oneanother.
+We see, for example, that \texttt{vcode\_div\_float} on line 7 must wait for \texttt{vcode\_int\_to\_float}, and so on all the way back to the \texttt{vcode\_not\_bool} and \texttt{vcode\_add\_int} on lines 1 and 2, which have no dependencies.
+For a graphical representation of these dependencies, see figure~\ref{fig:teaser}.
+
+VIR is a representation that is significantly closer to the physical structure of a hardware circuit, which greatly simplifies the task of synthesizing the high-level algorithm into hardware.
 
 \subsection{Chisel}
 
@@ -277,6 +322,8 @@ A flat data parallel language would struggle to reveal the parallelism available
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{acks}
+peter, karl,
+authors of hpdc paper
 \end{acks}
 
 
