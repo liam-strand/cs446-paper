@@ -195,13 +195,13 @@
 
 \subsection{Village}
 
-Implementing complex algorithms in low-level parallel languages like CUDA or OpenMP is challenging.
+Implementing complex algorithms in low-level parallel languages like CUDA \cite{NVIDIA:CUDA:Manual} or OpenMP \cite{dagum1998openmp} is challenging.
 A direct implementation may be relatively easy, but taking full advantage of hardware capabilities often requires complex, inscrutable code that obfuscates the underlying algorithm.
 High-level parallel languages, like Chapel \cite{chamberlain2015chapel}, Bend \cite{bend-hvm2}, or NESL \cite{BLELLOCH-NESL-JPDC94, BLELLOCH-NSEL-ICFP96} can ergonomically express parallel algorithms, but their implementations can struggle to be as performant as their low-level counterparts because the programmer does not have direct access to hardware resources.
 
-The Village project provides a new implementation of NESL that aims to preserve NESL's expressive high-level parallel semantics and generate code that has the performance of a low-level parallel language.
-It does this by lowering NESL to VCODE, then VCODE to VIR, and finally VIR to LLVM-IR, which is handed off to the LLVM backend to generate a static executable.
-In this work, we intercept the compilation process at the VIR stage, and instead lower the program to a hardware design.
+The Village project provides a new implementation of NESL that aims to preserve it's expressive high-level parallel semantics and generate code that has the performance of a low-level parallel language.
+The compiler generates a static executable by lowering NESL to VCODE (Section~\ref{sec:vcode}), then VCODE to VIR (Section~\ref{sec:vir}), and finally VIR to LLVM-IR \cite{LATTNER:2004:LLVM}.
+In this work, we intercept the compilation process at the VIR stage, and instead synthesize the program to a hardware design.
 
 \subsubsection{NESL}
 
@@ -209,6 +209,7 @@ Designed in 1992 and implemented in 1996, NESL \cite{BLELLOCH-NESL-JPDC94, BLELL
 This model allows programmers to express the parallelism of their algorithms in terms of applying a function in parallel to a set of values, where those values could themselves be parallel functions.
 It is very flexible and allows the programmer to express all of the parallelism available in their algorithm.
 
+\ltrs{this next sentence desperately needs to be rewritten.}
 NESL is essentially just Standard ML with a sprinkling of parallelism.
 There is a parallel map/filter operator and collection types for that operator to consume.
 Recursion semantics are also updated to allow for parallel recursive calls.
@@ -236,23 +237,25 @@ Line 8 shows the recursive calls over the two subcollections, which can be execu
 A flat data parallel language would struggle to reveal the parallelism available in quicksort so succinctly and clearly.
 
 \subsubsection{VCODE}
+\label{sec:vcode}
 
 \ltrs{need to do a language pass on this section}
 Since NESL would be far too complex to execute directly at any speed, it is first lowered to VCODE.
-This lowering process flattens nested parallelism into flat parallelism over segmented vectors.
-This means that parallel recursive calls to parts of a collection, as in line 8 of figure~\ref{fig:nesl-sample}, are reduced to a single call.
+VCODE uses a (relatively) small set of instructions that operate on a logical stack of segmented vectors, further simplifying an implementation.
+This translation process maps nested parallelism to equivalent flat parallelism.
+This means that parallel recursive calls to parts of a collection, as in line 8 of Figure~\ref{fig:nesl-sample}, are reduced to a single call over a segmented vector.
 Although this flattening simplifies the implementation of a VCODE interpreter, it is still able to represent nearly all of the parallelism available in the original NESL program.
-Moreover, VCODE relies on a (relatively) small set of instructions that operate on a logical stack of segmented vectors, further simplifying an implementation.
 
 Translating a stack-based intermediate representation such as VCODE into a hardware design would be a monumental task.
 Fortunately, prior work allows VCODE to be translated to another intermediate representation that is much more ammenable to lowering to hardware.
 
 \subsubsection{VIR}
+\label{sec:vir}
 
-A good candiate intermediate representation for hardware synthesis would feature both relatively simple operations and a dataflow representation of the connections between operations.
+A good intermediate representation for hardware synthesis would feature both relatively simple operations and a dataflow representation of the connections between operations.
 VIR is a vector dataflow intermediate representation that uses instructions nearly indentical to those of VCODE.
-There is no stack of vectors, no global state, just a dataflow graph connecting inputs to outputs.
-The textual version of VIR appears to be a sequential single-static-assignment program, but the backing representation is of a true dependency graph between operators.
+Instead of a stack of vectors with global state, VIR is just a dataflow graph connecting inputs to outputs.
+The textual syntax of VIR is represented as a sequential single-static-assignment program, but the backing representation is of a true dependency graph between operators.
 
 \begin{figure}
 	\begin{center}
@@ -272,19 +275,19 @@ The textual version of VIR appears to be a sequential single-static-assignment p
 \end{figure}
 
 A dataflow graph representation is very helpful for hardware synthesis because it makes the dependencies between operations explicit.
-In hardware design, computations are performed by physical functional units (like adders and multipliers) that are wired together.
+In hardware design, computations are performed by physical functional units that are wired together.
 A dataflow graph serves as a direct blueprint for these connections, mapping how the output of one operation feeds into the input of another.
 This explicit representation of data movement is much easier to translate into a physical circuit than a stack-based representation like VCODE, where dependencies are implicit in the order of push and pop operations on a shared stack.
 
 Figure~\ref{fig:vir-sample} contains many operations that are dependent upon oneanother.
-We see, for example, that \texttt{vcode\_div\_float} on line 7 must wait for \texttt{vcode\_int\_to\_float}, and so on all the way back to the \texttt{vcode\_not\_bool} and \texttt{vcode\_add\_int} on lines 1 and 2, which have no dependencies.
+We see, for example, that \texttt{vcode\_div\_float} on line 7 must wait for \texttt{vcode\_int\_to\_float}, and so on back to \texttt{vcode\_not\_bool} and \texttt{vcode\_add\_int} on lines 1 and 2, which have no dependencies.
 For a graphical representation of these dependencies, see Figure~\ref{fig:teaser}.
 
 VIR is a representation that is significantly closer to the physical structure of a hardware circuit, which greatly simplifies the task of synthesizing the high-level algorithm into hardware.
 
 \subsection{Chisel}
 
-To perform that synthesis, we rely on Chisel \cite{chisel}, a new hardware description language embedded in Scala.
+To perform the synthesis, we rely on Chisel \cite{chisel}, a new hardware description language embedded in Scala.
 Chisel code takes the form of \emph{generators}, which are Scala classes that can be envoked by the Chisel compiler to generate a specific instance of a hardware module.
 Generators can take parameters and, since this is Scala, they are highly composable using both object-oriented and functional programming paradigms.
 
@@ -300,9 +303,7 @@ In this work, Chisel is used to map VIR nodes to hardware functional units, wire
 
 \section{Operator Graphs in Scala}
 
-In order to be able to transform a VIR graph into a hardware design, we need to first bring the VIR graph into the Chisel ecosystem.
-
-\subsection{Node Contents}
+In order to transform a VIR graph into a hardware design, we must first bring the VIR graph into the Chisel ecosystem.
 
 \begin{figure}
 	\begin{center}
@@ -323,6 +324,12 @@ sealed trait VcodeNode {
 	\label{fig:village-graph-node-def}
 \end{figure}
 
+\subsection{Node Contents}
+
+Each VIR node is represented as a subclass of a \texttt{VcodeNode}, which provides them with a globally unique identifier and requires that the node specifies its I/O (see Figure~\ref{fig:village-graph-node-def}).
+An addition, for example, takes two integer inputs and produces one integer output.
+This interface described to Scala as in Figure~\ref{fig:village-graph-addi-def}.
+
 \begin{figure}
 	\begin{center}
 		\begin{lstlisting}[language=scala]
@@ -336,14 +343,10 @@ sealed case class ADD_I() extends VcodeNode {
 	\label{fig:village-graph-addi-def}
 \end{figure}
 
-Every kind of node subclasses from \texttt{VcodeNode} (see Figure~\ref{fig:village-graph-node-def}, which provides them with a globally unique identifier and requires that the node specifies its I/O.
-An addition, for example, takes two integer inputs and produces one integer output.
-This interface described to Scala as in Figure~\ref{fig:village-graph-addi-def}.
-
 To interact with the outside world, the graph must define where inputs are supplied and outputs are read.
 I/O nodes serve this purpose.
 From the perspective of the \texttt{VcodeGraph}, an input node produces a single output of the specified type and an output node consumes a single input of the specified type.
-Each I/O node is also assigned an index number to specify the order in which the inputs and outputs appear when combined into a bus.
+Each I/O node is also assigned an index number to specify the order in which the inputs and outputs appear when combined in the accelerator's I/O.
 
 All of this complex object-oriented-class-hierarchy-mixin preamble is necessary to allow future generation steps to pattern match on the type of node to dispatch to the correct hardware generator.
 
@@ -381,8 +384,8 @@ The DSL is very helpful when defining graphs for unit testing, or for quick comp
 
 This representation permits any layout of nodes, with any set of edges connecting them.
 Many, many graphs can be represented that cannot be synthesized to hardware.
-Some examples include cycles, disconnected graphs, and duplicate edge labels.
-Before we can begin the synthesis process, we must validate that the graph is in fact syntehsizable.
+Some examples include cycles, disconnected graphs, and graphs with duplicate edge labels.
+Before we can begin the synthesis process, we must validate that the graph is in fact synthesizable.
 The properties asserted are as follows:
 
 \BEGINITEMIZE
@@ -390,14 +393,14 @@ The properties asserted are as follows:
 \item The graph is connected.
 \item A node's incoming edge count matches its logical input count.
 \item A node's outgoing edge count matches its logical output count.
-\item Each node's incoming and outgoing edges are numbered sequentially starting at 0.
-\item Each end of each edge is attached to a connection of the same type.
-\item The inputs and output nodes are numbered sequentially starting at 0.
+\item Each node's incoming edges are numbered sequentially from 0.
+\item The input and output ends of each edge are of the same type.
+\item The inputs and output nodes are numbered sequentially from 0.
 \ENDITEMIZE
 
 Two properties follow from these assertions.
 First, the set of input nodes and the set of output nodes can each be joined into a bus. \ltrs{``bus'' is the wrong word}
-Second, every node is connected to the correct number inputs and outputrs that will supply and consume values of the correct type.
+Second, every node is connected to the correct number of inputs and outputs that will supply and consume values of the correct type.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -422,7 +425,7 @@ abstract class VillageFunctionalUnit(n: VcodeNode)
 		{ /* bookkeeping */ }
 		\end{lstlisting}
 	\end{center}
-  \caption{The interface shared between all functional units.}
+	\caption{The interface shared between all functional units.}
 	\label{fig:fu-interface}
 \end{figure}
 
@@ -436,10 +439,11 @@ Each functional unit definition will extend the \texttt{VillageFunctionalUnit} c
 \subsection{Simple Unary and Binary Functional Units}
 
 Most VIR instructions are simple unary and binary arrathmatic operations.
-These functional units are small enough that they can execute in a single cycle, meaning that once their operands are \texttt{valid}, they can produce a \texttt{valid} result in the same cycle.
+\ltrs{I need to find a new sentence structure. The ..., meaning ... is getting tiresome.}
+These functional units are small enough that they can execute in a single cycle, meaning that once their operands become \texttt{valid}, they can produce a \texttt{valid} result in the same cycle.
 
-This simplification allows the Scala generator to be parameterized over the actual logical operation that needs to be performed.
-The same generator can be used for an integer addition, bitwise XOR, or boolean equality. 
+This simplification allows the Scala generator to be parameterized over the operation that needs to be performed.
+The same generator can be used for an integer addition, bitwise XOR, or boolean equality.
 In lines 2 and 3 of Figure~\ref{fig:fu-instantiation}, we see the generators used to create a \texttt{NOT\_I} and a \texttt{ADD\_I} functional unit.
 Of the 42 functional units defined in this work, 21 use either the \texttt{VillageBinaryFU} generator or the \texttt{VillageUnaryFU} generator.
 
@@ -458,7 +462,7 @@ val functional_units = Seq(
 )
 		\end{lstlisting}
 	\end{center}
-  \caption{Instantiating several different functional units.}
+	\caption{Instantiating several different functional units.}
 	\label{fig:fu-instantiation}
 \end{figure}
 
@@ -475,7 +479,7 @@ The outside world sees these nodes through the acclerator interface, which is de
 \subsection{Floating Point with \texttt{hardfloat}}
 
 Floating point functional units are by far the most complicated in this system.
-While floating point addition can be completed in a single cycle, division and square root can be achingly slow.
+While floating point addition can be completed in a single cycle, division and square root can be painfully slow.
 Moreover, implementing a high-performance floating point computation in hardware is devilishly difficult.
 Fortunately, the \texttt{hardfloat} library \cite{berkeley-hardfloat} provides high-quality implementations of all basic floating point operations.
 
@@ -505,7 +509,7 @@ Casting an integer to a boolean is identical.
 Conversions to and from floating point values are, as usual, more complex.
 \texttt{hardfloat} provides modules to perform these conversions, which both accept as input a ``rounding mode'' signal.
 For conversions from integers to floats, the module is always configured to round to the nearest representable number.
-For conversions from floats to integers, there are three seperate VIR/VCODE instructions for taking the ceiling or floor of a float, or truncating it towards zero.
+There are three seperate VIR instructions for rounding from a float to an integer: ceiling, floor, and truncation (round towards zero).
 Each of these instructions is mapped to a functional unit that is preconfigured to perform the appropriate rounding operation. An instantiation of the functional unit for \texttt{TRUNC\_F} is shown in line 7 of Figure~\ref{fig:fu-instantiation}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
