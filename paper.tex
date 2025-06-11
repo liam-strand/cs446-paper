@@ -74,7 +74,6 @@
   breaklines=true,
   breakatwhitespace=true,
   tabsize=2,
-  numbers=left
 }
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -216,7 +215,7 @@ Recursion semantics are also updated to allow for parallel recursive calls.
 
 \begin{figure}
 	\begin{center}
-		\begin{lstlisting}[language=NESL]
+		\begin{lstlisting}[language=NESL, numbers=left]
 function qsort(a) =
   if (#a < 2) then a
   else let 
@@ -257,7 +256,7 @@ The textual version of VIR appears to be a sequential single-static-assignment p
 
 \begin{figure}
 	\begin{center}
-		\begin{lstlisting}
+		\begin{lstlisting}[numbers=left]
 (%V1) = vcode_not_bool(%A2)
 (%V2) = vcode_add_int(%A0, %A1)
 (%V3) = vcode_bool_to_int(%V1)
@@ -314,13 +313,13 @@ case object INT extends VillageOperand
 case object FLOAT extends VillageOperand
 
 sealed trait VcodeNode {
-  val inputs:  Seq[VillageOperand]
-  val outputs: Seq[VillageOperand]
-  val id: Int = VcodeNode.next()
+		val inputs:  Seq[VillageOperand]
+		val outputs: Seq[VillageOperand]
+		val id: Int = VcodeNode.next()
 }
 		\end{lstlisting}
 	\end{center}
-	\caption{The definition of the \texttt{VcodeNode} type that is used to internally represent a VIR graph within Scala.}
+	\caption{The \texttt{VcodeNode} type that is used to internally represent a VIR graph within Scala.}
 	\label{fig:village-graph-node-def}
 \end{figure}
 
@@ -333,23 +332,8 @@ sealed case class ADD_I() extends VcodeNode {
 }
 		\end{lstlisting}
 	\end{center}
-	\caption{The definition of a simple binary operator node class, specifying its I/O.}
+	\caption{A simple binary operator node class.}
 	\label{fig:village-graph-addi-def}
-\end{figure}
-
-\begin{figure}
-	\begin{center}
-		\begin{lstlisting}[language=scala]
-sealed case class INPUT_I(i: Int)
-		extends VcodeNode with IONode {
-		val inputs = Seq();
-		val outputs = Seq(INT);
-		val idx = i
-}
-		\end{lstlisting}
-	\end{center}
-	\caption{The definition of the a simple binary operator node class, specifying its I/O.}
-	\label{fig:village-graph-input-i}
 \end{figure}
 
 Every kind of node subclasses from \texttt{VcodeNode} (see Figure~\ref{fig:village-graph-node-def}, which provides them with a globally unique identifier and requires that the node specifies its I/O.
@@ -360,7 +344,6 @@ To interact with the outside world, the graph must define where inputs are suppl
 I/O nodes serve this purpose.
 From the perspective of the \texttt{VcodeGraph}, an input node produces a single output of the specified type and an output node consumes a single input of the specified type.
 Each I/O node is also assigned an index number to specify the order in which the inputs and outputs appear when combined into a bus.
-Figure~\ref{fig:village-graph-input-i} shows how this is achieved in Scala.
 
 All of this complex object-oriented-class-hierarchy-mixin preamble is necessary to allow future generation steps to pattern match on the type of node to dispatch to the correct hardware generator.
 
@@ -379,13 +362,13 @@ These graphs can be imported as JSON or DOT, and they are endlessly queryable an
 		\begin{lstlisting}[language=scala]
 val add = new ADD_I
 val graph = VcodeGraph.from(Seq(
-	new INPUT_I(0) ~> add :+ 0,
-	new INPUT_I(1) ~> add :+ 1,
-	add ~> new OUTPUT_B(0) :+ 0
+		new INPUT_I(0) ~> add :+ 0,
+		new INPUT_I(1) ~> add :+ 1,
+		add ~> new OUTPUT_B(0) :+ 0
 ))
 		\end{lstlisting}
 	\end{center}
-	\caption{Defining a small \texttt{VillageGraph} that adds two numbers together using the \texttt{scala-graph} DSL.}
+	\caption{A small \texttt{VcodeGraph} that adds two numbers together using the \texttt{scala-graph} DSL.}
 	\label{fig:village-graph-def}
 \end{figure}
 
@@ -413,7 +396,7 @@ The properties asserted are as follows:
 \ENDITEMIZE
 
 Two properties follow from these assertions.
-First, the set of input nodes and the set of output nodes can each be joined into a bus.
+First, the set of input nodes and the set of output nodes can each be joined into a bus. \ltrs{``bus'' is the wrong word}
 Second, every node is connected to the correct number inputs and outputrs that will supply and consume values of the correct type.
 
 
@@ -421,25 +404,123 @@ Second, every node is connected to the correct number inputs and outputrs that w
 
 \section{Hardware Functional Unit Library}
 
-\subsection{Simple Unary and Binary Units}
+Each node in the \texttt{VcodeGraph} needs to be mapped to a hardware module.
+Many of these modules are quite simple, needing only a few lines of Chisel code.
+Others, specifically floating point operations, are much more complex.
+
+\begin{figure}
+	\begin{center}
+		\begin{lstlisting}[language=scala]
+trait HasVillageIO {
+  	val io: Bundle {
+  			val in: Vec[DecoupledIO[UInt]];
+  			val out: DecoupledIO[UInt];
+  	}
+}
+abstract class VillageFunctionalUnit(n: VcodeNode) 
+		extends Module with HasVillageIO
+		{ /* bookkeeping */ }
+		\end{lstlisting}
+	\end{center}
+  \caption{The interface shared between all functional units.}
+	\label{fig:fu-interface}
+\end{figure}
+
+This complexity is hidden behind a shared interface that is implemented by all functional units in the system.
+The interface, shown in Figure~\ref{fig:fu-interface}, specifies that all inputs and outputs are \emph{decoupled}, meaning that the producer must mark the data as \texttt{valid} and the consumer must be \texttt{ready} to receive it before the transfer takes place.
+Moreover, it places all inputs in a single \texttt{Vec} that can be indexed into, and limits each functional unit to a single output.
+Removing this limitation is a work-in-progress.
+
+Each functional unit definition will extend the \texttt{VillageFunctionalUnit} class and use the I/O provided by one of the \texttt{HasVillageIO} specializations (see Section~\ref{sec:hasvillageio-specializations}).
+
+\subsection{Simple Unary and Binary Functional Units}
+
+Most VIR instructions are simple unary and binary arrathmatic operations.
+These functional units are small enough that they can execute in a single cycle, meaning that once their operands are \texttt{valid}, they can produce a \texttt{valid} result in the same cycle.
+
+This simplification allows the Scala generator to be parameterized over the actual logical operation that needs to be performed.
+The same generator can be used for an integer addition, bitwise XOR, or boolean equality. 
+In lines 2 and 3 of Figure~\ref{fig:fu-instantiation}, we see the generators used to create a \texttt{NOT\_I} and a \texttt{ADD\_I} functional unit.
+Of the 42 functional units defined in this work, 21 use either the \texttt{VillageBinaryFU} generator or the \texttt{VillageUnaryFU} generator.
+
+Since I/O between functional units is delegated to \texttt{HasVillageIO} specializations, the actual implementation of each of these generators requires only six lines of code. Moreover, the implementation of a functional unit using one of these generators requires just a single line of code.
+
+\begin{figure}
+	\begin{center}
+		\begin{lstlisting}[language=scala,numbers=left]
+val functional_units = Seq(
+	new VillageUnaryFU(new NOT_I(),  ~_),
+  new VillageBinaryFU(new ADD_I(), _+_),
+	new VillageIO(new INPUT_I(0)),
+	new VillageFloatAddFU(new ADD_F()),
+	new VillageFloatCmpFU(new EQ_F(), EQ),
+	new VillageFloatToIntFU(new TRUNC_F(), TRUNC)
+)
+		\end{lstlisting}
+	\end{center}
+  \caption{Instantiating several different functional units.}
+	\label{fig:fu-instantiation}
+\end{figure}
 
 \subsection{Input and Output}
 
+Input functional units receive their input from the outside world and provide output to functional units that perform computations.
+Since all connections between functional units are 64 bits wide (another restriction whose removal is a work-in-progress), boolean inputs are first or-reduced so that the integer value of the wire is either 0 or 1.
+
+On the output side, functional units receive their input from some other functional unit and provide output to the outside world.
+Output functional units also or-reduce boolean values before emitting them.
+
+The outside world sees these nodes through the acclerator interface, which is described in Section~\ref{sec:accelerator-io}.
+
 \subsection{Floating Point with \texttt{hardfloat}}
 
+Floating point functional units are by far the most complicated in this system.
+While floating point addition can be completed in a single cycle, division and square root can be achingly slow.
+Moreover, implementing a high-performance floating point computation in hardware is devilishly difficult.
+Fortunately, the \texttt{hardfloat} library \cite{berkeley-hardfloat} provides high-quality implementations of all basic floating point operations.
+
+\texttt{hardfloat} uses a recoded version of the IEEE 754 standard, so each floating point functional unit first converts its inputs from IEEE 754 format to the recoded format before passing the bits off to the appropriate \texttt{hardfloat} module.
+When ready to emit a result, the output is then reformatted back to adhere to the IEEE 754 standard.
+This way, all floating point values in wires or in visible registers are in IEEE 754 format, rather than having some recoded and some not.
+Since the reformatting operation is a simple matter of bit swizzling, the overhead is negligable.
+
+There are additional challenges to consider when designing functional units for multicycle computations like division or square root.
+The \texttt{hardfloat} modules signal when they are \texttt{ready} for input and when their outputs are \texttt{valid}.
+These signals need to be wired up to the functional unit I/O so that the \texttt{hardfloat} module does not get swamped with operands.
+The \texttt{hardfloat} division module specifically does support some overlapping of operands, but we are unfortunately unable to take advantage of this feature at this time.
+
+Floating point comparisons are also an interesting challenge because \texttt{hardfloat} provides one ``total-comparison'' module rather than a seperate module for each type of comparison (greater-than, equal, etc).
+Luckily, Chisel can come to the rescue.
+The floating point comparison generator takes a parameter that determines what kind of comparison to do.
+In line 6 of Figure~\ref{fig:fu-instantiation}, the generator is passed the \texttt{EQ} flag to emit a functional unit that checks for floating point equality.
+
 \subsection{Conversions}
+
+Finally, we arrive at the last category of functional unit: type conversions.
+We may want to convert an integer into a boolean, or round a floating point value into an integer.
+Converting between integers and booleans is very straightforward.
+To transform a boolean into an integer we simply emit 1 if the input is nonzero and 0 otherwise.
+Casting an integer to a boolean is identical.
+
+Conversions to and from floating point values are, as usual, more complex.
+\texttt{hardfloat} provides modules to perform these conversions, which both accept as input a ``rounding mode'' signal.
+For conversions from integers to floats, the module is always configured to round to the nearest representable number.
+For conversions from floats to integers, there are three seperate VIR/VCODE instructions for taking the ceiling or floor of a float, or truncating it towards zero.
+Each of these instructions is mapped to a functional unit that is preconfigured to perform the appropriate rounding operation. An instantiation of the functional unit for \texttt{TRUNC\_F} is shown in line 7 of Figure~\ref{fig:fu-instantiation}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Connecting Functional Units}
 
-\subsection{\texttt{VillageFunctionalUnit} Interface}
+\subsection{\texttt{HasVillageIO} Specializations}
+\label{sec:hasvillageio-specializations}
 
 \subsection{Operand Buffering}
 
 \subsection{Wiring It All Up}
 
 \subsection{Accelerator I/O}
+\label{sec:accelerator-io}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
