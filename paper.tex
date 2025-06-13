@@ -189,8 +189,8 @@ High-level synthesis \cite{hls-overview} has emerged as a critical technology to
 \paragraph{Motivation}
 
 Unfortunately, high-level synthesis tools struggle to map from the C-style languages that software engineers are familiar with to efficient hardware implementations \cite{hls-challenges}.
-With modern tools such as AMD's Vitis, it is possible to achieve the desired hardware design.
-But, cajoling the high-level synthesis tool into actually generating an efficient design requires extensive refactoring, often to the point that the C or C++ code mirrors what would appear in a hardware description language like Verilog \cite{hls-amd-refactoring}.
+With modern tools such as AMD's Vitis, however, it is possible to achieve the desired hardware design.
+But, actually generating an efficient design requires extensive refactoring, often to the point where the C or C++ code mirrors what would appear in a hardware description language like Verilog \cite{hls-amd-refactoring}.
 
 Is it possible to take advantage of the semantic richness of a high-level parallel language to generate an efficient custom hardware design?
 Can this generation be done transparently to the end-programmer?
@@ -228,16 +228,15 @@ Finally, the hardware designs have not yet been run on actual hardware, instead 
 \label{sec:village}
 
 Implementing complex algorithms in low-level parallel languages like C or C++ with CUDA \cite{NVIDIA:CUDA:Manual}, OpenMP \cite{dagum1998openmp}, or MPI \cite{MPI-SPEC-09} is challenging.
-These languages force the programmer to specify precisely how their algorithm should be mapped on to hardware.
-CUDA is especially troublesome in this regard, revealing every minute facet of a GPU's architecture.
-A programmer may choose to ignore those details and write a direct implementation.
-But, they leave performance on the table compared to a programmer who is willing to optimize to the microarchitecture and write complex, inscrutable code that obfuscates the underlying algorithm.
+These languages force the programmer to specify precisely how their algorithm should be mapped onto hardware.
+CUDA is especially troublesome in this regard, exposing every minute facet of a GPU's architecture.
+A programmer may choose to ignore those details and write a direct implementation, but, they leave performance on the table compared to a programmer who is willing to optimize to the microarchitecture and write complex, inscrutable code that obfuscates the underlying algorithm.
 
 The other options available to programmers are high-level parallel languages.
-Languages like Chapel \cite{chamberlain2015chapel}, Bend \cite{bend-hvm2}, or NESL \cite{BLELLOCH-NESL-JPDC94, BLELLOCH-NSEL-ICFP96} can ergonomically express parallel algorithms and their rich semantics provide an intelligent compiler multitudinous opportunities to automatically optimize the implementation.
+Languages like Chapel \cite{chamberlain2015chapel}, Bend \cite{bend-hvm2}, or NESL \cite{BLELLOCH-NESL-JPDC94, BLELLOCH-NSEL-ICFP96} can ergonomically express parallel algorithms, and their rich semantics provide an intelligent compiler multitudinous opportunities to automatically optimize the implementation.
 Functional high-level parallel languages are even able to abstract away the execution model.
 Unfortunately, these benefits often come at the cost of performance.
-High-level programming languages can struggle to be as performant as their low-level counterparts because the programmer does not have direct access to hardware resources, making performance engineering essentially impossible.
+High-level programming languages can struggle to be as performant as their low-level counterparts because the programmer does not have direct control of hardware resources, making performance engineering essentially impossible.
 
 The Village project \cite{village25} provides a new implementation of NESL that aims to preserve its expressive high-level parallel semantics and generate code that has the performance of a low-level parallel language.
 The compiler generates a static executable by lowering NESL to VCODE (Section~\ref{sec:vcode}), then VCODE to VIR (Section~\ref{sec:vir}), VIR to LLVM-IR \cite{LATTNER:2004:LLVM}, and finally relying on LLVM's backend to produce machine code.
@@ -281,7 +280,7 @@ A flat data parallel language would struggle to reveal the parallelism available
 
 \ltrs{need to do a language pass on this section}
 Since NESL would be far too complex to execute directly at any speed, it is first lowered to VCODE.
-VCODE uses a (relatively) small set of instructions that operate on a stack of segmented vectors, further simplifying an implementation.
+VCODE uses a relatively small set of instructions that operate on a stack of segmented vectors, further simplifying an implementation.
 This translation process maps nested parallelism to equivalent flat parallelism.
 This means that parallel recursive calls to parts of a collection, as in line 8 of Figure~\ref{fig:nesl-sample}, are reduced to a single call over a segmented vector.
 Although this flattening simplifies the implementation of a VCODE interpreter, it is still able to represent nearly all of the parallelism available in the original NESL program.
@@ -292,9 +291,9 @@ Fortunately, prior work allows VCODE to be translated to another intermediate re
 \subsubsection{VIR}
 \label{sec:vir}
 
-A good intermediate representation for hardware synthesis would feature both relatively simple operations and a data\-flow representation of the connections between operations.
-VIR is a vector dataflow intermediate representation that uses instructions nearly identical to those of VCODE.
-Instead of a stack of vectors with global state, VIR is just a dataflow graph connecting inputs to outputs.
+Village Intermediate Representation (VIR) is a vector dataflow language that uses simple instructions nearly identical to those of VCODE.
+This makes it an excellent representation of a program to lower to hardware.
+Instead of a stack of vectors with global state, VIR is simply a dataflow graph connecting inputs to outputs.
 The textual syntax of VIR is represented as a sequential single-static-assignment program, but the backing representation is of a true dependency graph between operators.
 
 \begin{figure}
@@ -315,7 +314,7 @@ The textual syntax of VIR is represented as a sequential single-static-assignmen
 \end{figure}
 
 A dataflow graph representation is very helpful for hardware synthesis because it makes the dependencies between operations explicit.
-In hardware design, computations are performed by physical functional units that are wired together.
+In hardware design, computations are performed by physical functional units which are wired together.
 A dataflow graph serves as a direct blueprint for these connections, mapping how the output of one operation feeds into the input of another.
 This explicit representation of data movement is much easier to translate into a physical circuit than a stack-based representation like VCODE, where dependencies are implicit in the order of push and pop operations on a shared stack.
 
@@ -328,12 +327,12 @@ VIR is a representation that is significantly closer to the physical structure o
 \subsection{Chisel}
 \label{sec:chisel}
 
-To perform the synthesis, we rely on Chisel \cite{chisel}, a new hardware description language embedded in Scala.
+To perform the synthesis, we rely on Chisel \cite{chisel}, a new hardware description language embedded in Scala \cite{scala-overview}.
 Chisel code takes the form of \emph{generators}, which are Scala classes that can be invoked by the Chisel compiler to generate a specific instance of a hardware module.
 Generators can take parameters and, since this is Scala, they are highly composable using both object-oriented and functional programming paradigms.
 
 During compilation, the Scala code is executed to generate the circuit in an intermediate representation called FIRRTL (Flexible Intermediate Representation for RTL).
-This FIRRTL is then passed to a separate compiler which performs hardware-specific optimizations before emitting a final, low-level hardware description such as Verilog.
+This FIRRTL is then passed to a separate compiler which performs hardware-specific optimizations before emitting a final, low-level hardware description such as Verilog \cite{systemverilog-ieee}.
 
 Chisel has been used to build many complex hardware projects, including high-performance RISC-V cores like the in-order Rocket \cite{rocket-core} and the out-of-order SonicBOOM \cite{boom-core}.
 Moreover, Chisel is the foundation of the Chipyard \cite{chipyard} framework for SoC design, simulation, and synthesis.
@@ -369,7 +368,7 @@ sealed trait VcodeNode {
 
 Each VIR node is represented as a subclass of a \texttt{VcodeNode}, which provides them with a globally unique identifier and requires that the node specifies its I/O (see Figure~\ref{fig:village-graph-node-def}).
 An addition, for example, takes two integer inputs and produces one integer output.
-This interface described to Scala as in Figure~\ref{fig:village-graph-addi-def}.
+This interface described in Scala as in Figure~\ref{fig:village-graph-addi-def}.
 
 \begin{figure}
 	\begin{center}
@@ -393,13 +392,15 @@ This complex object-oriented-class-hierarchy-mixin preamble is necessary to allo
 
 \subsection{\texttt{scala-graph} DSL}
 
+\ltrs{Need to rewrite this first sentence.}
 It is not enough to have nodes alone, we must also represent the edges between nodes!
 To accomplish this we take advantage of the full-featured \texttt{scala-graph} \cite{scala-graph} library.
-\texttt{scala-graph} allows us to create a typed graph of \texttt{VcodeNode}s, that are linked by labeled, directed edges.
-We need the edges to be labeled because some VIR operations are not commutative, meaning that the ordering of their inputs matters.
+\texttt{scala-graph} allows us to create a typed graph of \texttt{VcodeNode}s that are linked by labeled, directed edges.
+We need the edges to be labeled because some VIR operations are not commutative, meaning the ordering of their inputs matters.
+\ltrs{Need to rewrite next sentence.}
 To encode this ordering, each edge is labeled with which input it should be attached to on the target node.
 
-These graphs can be imported as JSON or DOT, and they are endlessly queryable and transformable from within Scala.
+These graphs can be imported as JSON or DOT, and they are easily queryable and transformable from within Scala.
 
 \begin{figure}
 	\begin{center}
@@ -416,17 +417,17 @@ val graph = VcodeGraph.from(Seq(
 	\label{fig:village-graph-def}
 \end{figure}
 
-As a bonus, \texttt{scala-graph} also uses Scala implicits to create a domain-specific language for describing these VIR graphs.
+As a bonus, \texttt{scala-graph} also uses Scala implicits to create a domain-specific language (DSL) for describing these VIR graphs.
 Figure~\ref{fig:village-graph-def} shows an example of this DSL in-use.
 The \texttt{\textasciitilde>} operator denotes a directed edge and the \texttt{:+} operator assigns the edge label.
-The DSL is very helpful when defining graphs for unit testing, or for quick compilation and synthesis checks.
+The DSL is helpful when defining graphs for unit testing, or for quick compilation and synthesis checks.
 
 \subsection{Graph Validation}
 
 This representation permits any layout of nodes, with any set of edges connecting them.
-Many, many graphs can be represented that cannot be synthesized to hardware.
+Many graphs can be represented but which cannot be synthesized to hardware.
 Some examples include cycles, disconnected graphs, and graphs with duplicate edge labels.
-Before we can begin the synthesis process, we must validate that the graph is in fact synthesizable.
+Before we can begin the synthesis process, we must validate that the graph is, in fact, synthesizable.
 The properties asserted are as follows:
 
 \begin{itemize}
@@ -439,7 +440,7 @@ The properties asserted are as follows:
 \end{itemize}
 
 Two properties follow from these assertions.
-First, the set of input nodes and the set of output nodes can each be joined into a bus. \ltrs{``bus'' is the wrong word}
+First, the set of input nodes and the set of output nodes can each be joined into a continuous sequence. 
 Second, every node is connected to the correct number of inputs and outputs that will supply and consume values of the correct type.
 
 
@@ -484,10 +485,10 @@ These functional units are small enough that they can execute in a single cycle,
 
 This simplification allows the Scala generator to be parameterized over the operation that needs to be performed.
 The same generator can be used for an integer addition, bitwise XOR, or boolean equality.
-In lines 2 and 3 of Figure~\ref{fig:fu-instantiation}, we see the generators used to create a \texttt{NOT\_I} and a \texttt{ADD\_I} functional unit.
+In lines 2 and 3 of Figure~\ref{fig:fu-instantiation}, we see the generators used to create a \texttt{NOT\_I} and an \texttt{ADD\_I} functional unit.
 Of the 42 functional units defined in this work, 21 use either the \texttt{VillageBinaryFU} generator or the \texttt{VillageUnaryFU} generator.
 
-Since internal I/O is delegated to \texttt{HasVillageIO} specializations, the actual implementation of each of these generators requires only six lines of code. Moreover, the implementation of a functional unit using one of these generators requires just a single line of code.
+Since internal I/O is delegated to \texttt{HasVillageIO} specializations, the actual implementation of each of these generators requires only six lines of code. Moreover, the implementation of a functional unit using one of these generators requires a single line of code as shown in Figure~\ref{fig:fu-instantiation}.
 
 \begin{figure}
 	\begin{center}
@@ -511,7 +512,7 @@ val functional_units = Seq(
 Input functional units receive their input from the outside world and provide output to functional units that perform computations.
 Since all connections between functional units are 64 bits wide (another restriction whose removal is a work-in-progress), boolean inputs are first or-reduced so that the integer value of the wire is either 0 or 1.
 
-On the output side, functional units receive their input from some other functional unit and provide output to the outside world.
+On the output side, functional units receive their input from another functional unit and provide output to the outside world.
 Output functional units also or-reduce boolean values before emitting them.
 
 The outside world sees these nodes through the accelerator interface, which is described in Section~\ref{sec:accelerator-io}.
@@ -519,31 +520,31 @@ The outside world sees these nodes through the accelerator interface, which is d
 \subsection{Floating Point with \texttt{hardfloat}}
 
 Floating point functional units are by far the most complicated in this system.
-While floating point addition can be completed in a single cycle, division and square root can be painfully slow.
-Moreover, implementing a high-performance floating point computation in hardware is quite difficult.
+While floating point addition can be completed in a single cycle, division and square root computations can span many cycles.
+Moreover, implementing a high-performance floating point computation in hardware is difficult.
 Fortunately, the \texttt{hardfloat} library \cite{berkeley-hardfloat} provides high-quality implementations of all basic floating point operations.
 
 \texttt{hardfloat} uses a recoded version of the IEEE 754 standard \cite{ieee-fp-2019}, so each floating point functional unit first converts its inputs from IEEE 754 format to the recoded format before passing the bits off to the appropriate \texttt{hardfloat} module.
 When ready to emit a result, the output is then reformatted back to adhere to the IEEE 754 standard.
-This way, all floating point values in wires or in visible registers are in IEEE 754 format, rather than having some recoded and some not.
+This way, all floating point values in wires or in visible registers are in IEEE 754 format.
 Since the reformatting operation is a simple matter of bit swizzling, the overhead is negligible.
 
 There are additional challenges to consider when designing functional units for multicycle computations like division or square root.
 The \texttt{hardfloat} modules signal when they are \texttt{ready} for input and when their outputs are \texttt{valid}.
-These signals need to be wired up to the functional unit I/O so that the \texttt{hardfloat} module does not get swamped with operands.
-The \texttt{hardfloat} division module specifically does support some overlapping of operands, but we are unfortunately unable to take advantage of this feature at this time.
+These signals need to be wired to the functional unit I/O so that the \texttt{hardfloat} module does not get swamped with operands.
+The \texttt{hardfloat} division module specifically supports some overlapping of operands, but we are unfortunately unable to take advantage of this feature at this time.
 
-Floating point comparisons are also an interesting challenge because \texttt{hardfloat} provides one ``total-comparison'' module rather than a separate module for each type of comparison (greater-than, equal, etc).
-Luckily, Chisel can come to the rescue.
+Floating point comparisons are challenging because \texttt{hardfloat} provides one ``total-comparison'' module rather than a separate module for each type of comparison (greater-than, equal, etc).
+Luckily, this issue can be addressed with Chisel features.
 The floating point comparison generator takes a parameter that selects the comparison to perform.
 In line 6 of Figure~\ref{fig:fu-instantiation}, the generator is passed the \texttt{EQ} flag to emit a functional unit that checks for floating point equality.
 
 \subsection{Conversions}
 
-Finally, we arrive at the last category of functional unit: type conversions.
+Finally, there is at the last category of functional unit: type conversions.
 We may want to convert an integer into a boolean, or round a floating point value into an integer.
 Converting between integers and booleans is straightforward.
-To transform a boolean into an integer we simply emit 1 if the input is nonzero and 0 otherwise.
+To transform a boolean into an integer we emit \texttt{1} if the input is nonzero and \texttt{0} otherwise.
 Casting an integer to a boolean is identical.
 
 Conversions to and from floating point values are, as usual, more complex.
@@ -556,7 +557,7 @@ Each of these instructions is mapped to a functional unit that is preconfigured 
 
 \section{Connecting Functional Units}
 
-Now that we have mapped VIR nodes to functional unit generators, we can generate a functional unit for each of the nodes in our graph.
+With VIR nodes mapped to functional unit generators, we can generate a functional unit for each of the nodes in our graph.
 The functional units are stored in a hash table using the associated node ID as a key.
 Each functional unit also stores a reference to the node that generated it.
 This way, it is trivial to traverse the tree of functional units by using the metadata stored in the associated node.
@@ -582,29 +583,29 @@ trait HasVillageBinaryIO extends HasVillageIO {
 	\label{fig:village-io-def}
 \end{figure}
 
-While it would be possible to define a new I/O bundle that implements \texttt{HasVillageIO} for every functional unit generator, it is far simpler to build mix-in traits for the two cases (unary and binary) and reuse them throughout the functional unit library.
+While it would be possible to define a new I/O bundle that implements \texttt{HasVillageIO} for every functional unit generator, it is more straightforward to build mix-in traits for the two cases (unary and binary) and reuse them throughout the functional unit library.
 The output bundle is identical in each case, using a single decoupled 64 bit integer.
 \texttt{HasVillageUnaryIO}'s input bundle is comprised of a \texttt{Seq} with a single decoupled 64 bit integer.
 The binary version's input is the same except it has two such integers as shown in Figure~\ref{fig:village-io-def}.
 
-Note that the inputs are individually decoupled, meaning that the functional unit can indicate that it is ready to receive an input on connection 0 but not on connection 1, for example.
+Note that the inputs are individually decoupled, meaning that the functional unit can indicate, for example, that it is ready to receive an input on connection 0 but not on connection 1.
 
 \subsection{Operand Buffering}
 
 In a dataflow graph such as the one shown in Figure~\ref{fig:teaser}, it is clear that some functional units may receive each of their operands during different cycles.
 For example, the \texttt{DIV\_F} node will almost certainly receive operand 1 (the denominator) well before it receives operand 0 (the numerator).
-We need a way to store the earlier operand and wait for the later operand before proceeding.
+We need a way to store the earlier operand and wait for the latter operand before proceeding.
 
 To accomplish this, \texttt{HasVillageIO} specializations implement operand queuing and buffering as shown in Figure~\ref{fig:village-io-def}.
 Each functional unit can store a globally configurable number of operands (four by default) for each of its inputs.
 Instead of reading directly from the I/O bundle, the functional units read their inputs from the consumer side of the operand queues.
 
-This adds a single cycle of latency to each of the connections, which is a significant performance penalty, especially when individual functional units can often execute in a single cycle.
+This adds a single cycle of latency to each of the connections, which is a significant performance penalty, especially when considering that individual functional units can often execute in a single cycle.
 In exchange, it becomes possible to synthesize graphs where a functional unit may have its operands arrive during different cycles.
 Moreover, if a functional unit takes a variable number of cycles to execute, it can now buffer operands so that the whole accelerator is not stalled if a single operation takes modestly longer than expected.
 
 The performance penalty of this buffering is mitigated by combinatorially connecting the \texttt{valid} signals from the input bundle to the consumer end of the buffer queue.
-This allows the input to be read one cycle sooner that would otherwise be possible.
+This allows the input to be read one cycle sooner than would otherwise be possible.
 
 \subsection{Wiring It All Up}
 
@@ -624,35 +625,35 @@ for (e <- vir_graph.edges) {
 
 After instantiating the functional units, we must connect them together following the edges in the VIR instruction graph.
 Each input and output is a decoupled interface, so in addition to the data connections, we must also pass a parallel \texttt{valid} wire and a reversed \texttt{ready} wire.
-So, a unary functional unit requires six connections, receiving data and a \texttt{valid} signal from its predecessor and a \texttt{ready} signal from its successor, and sending data and a \texttt{valid} signal to its successor and a \texttt{ready} signal to its predecessor.
+Thus, a unary functional unit requires six connections, receiving data and a \texttt{valid} signal from its predecessor and a \texttt{ready} signal from its successor, and sending data and a \texttt{valid} signal to its successor and a \texttt{ready} signal to its predecessor.
 
 The complex task of managing all of these connections is vastly simplified by Chiesl's \texttt{<>} operator, which connects all of the outputs from one side to matching inputs on the other side, and vice versa.
 The Scala type system ensures that the two modules have compatible I/O.
-Since every functional unit is known to implement \texttt{HasVillageIO}, the type system can guarantee that \texttt{io.in(0)}, a flipped (i.e., swapped inputs and outputs) decoupled 64 bit integer, can connect to \texttt{io.out}, a decoupled 64 bit integer.
+Since every functional unit is required to implement \texttt{HasVillageIO}, the type system can guarantee that \texttt{io.in(0)}, a flipped (i.e., swapped inputs and outputs) decoupled 64 bit integer, can connect to \texttt{io.out}, a decoupled 64 bit integer.
 
-So, after carefully constructing a type hierarchy to enforce compatible interfaces between functional units, we are able to wire up the entire graph in a mere four lines of code, shown in Figure~\ref{fig:village-connections}.
+So, after carefully constructing a type hierarchy to enforce compatible interfaces between functional units, we are able to wire up the entire graph using four lines of code, shown in Figure~\ref{fig:village-connections}.
 
 \subsection{Accelerator I/O}
 \label{sec:accelerator-io}
 
 A connected graph of functional units is useless unless it has an interface to communicate with the outside world.
 This interface is asynchronous and ordered.
-All elements of an input are supplied at once and then the client of the accelerator must wait for the output.
+All elements of an input are supplied at once whereupon the client of the accelerator must wait for the output.
 For the graph shown in Figure~\ref{fig:teaser}, a client would supply four 64 bit numbers: two integers, a boolean (extended to 64 bits), and a 64 bit IEEE 754 floating point number.
 
 The inputs and outputs are decoupled \emph{as a collection}.
 There is no notion of partial validity or readiness from outside of the accelerator.
-So, the accelerator is either \texttt{ready} to receive inputs or it is not.
+Then, the accelerator is either \texttt{ready} to receive inputs or it is not.
 Likewise, its outputs are either \texttt{valid} or not.
-The client of the accelerator must also mark their inputs as entirely \texttt{valid} or otherwise, and signal the accelerator if they are \texttt{ready} for all output.
+The client of the accelerator must also mark their inputs as entirely \texttt{valid} or not, and signal the accelerator if they are \texttt{ready} for all output.
 
-The unified interface is far simpler for any programmer or driver developer who intends to interact with the device.
+The unified interface is far more straightforward for any programmer or driver developer who intends to interact with the device.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Results}
 
-Unfortunately due to time constraints, the accelerator synthesis system has not been integrated into the Village compiler and runtime.
+Due to time constraints, the accelerator synthesis system has not been integrated into the Village compiler and runtime.
 So, the results presented here demonstrate the correctness of the graph representation, functional unit library, and I/O system rather than real-world performance metrics.
 
 \subsection{Testing Methodology}
@@ -709,7 +710,8 @@ While this work allows hardware accelerators to be generated from abstract VIR i
 
 \subsection{Simulated Integration}
 
-To prototype the software interface between the accelerator and the Village runtime without needing to debug FPGA issues, a accelerator simulator library can be generated by Verilator.
+To prototype the software interface between the accelerator and the Village runtime without needing to debug FPGA issues, an accelerator simulator library can be generated by Verilator.
+\ltrs{Rewrite this next sentence.}
 Then, a simulated version of the accelerator can be interacted with through simple function calls into this generated library.
 This would allow developers to quickly iterate on the runtime-facing API that will eventually be implemented by a custom hardware driver.
 
@@ -722,9 +724,10 @@ This tight integration simplifies driver development, minimizes communication ov
 \subsection{Superscalar}
 
 A single accelerator is highly unlikely to require all of the space available on an FPGA.
-It should be a relatively simple matter to replicate the accelerator many times to consume the available area.
+It should be a relatively simple matter to replicate the accelerator many times to utilize the available area.
 Then, an arbiter can be added to dispatch inputs to the available graph accelerators in a round-robin manner.
 On the other side, outputs could be read into a shared buffer and shipped off the FPGA.
+\ltrs{Need to add a few sentences about how this addes a new dimension of parallelism to the stack.}
 
 \subsection{Dynamics}
 
