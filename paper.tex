@@ -138,11 +138,11 @@
 \orcid{0009-0005-9712-1689}
 
 \begin{abstract}
-		Programming specialized hardware accelerators like FPGAs is notoriously difficult, creating a gap between high-level algorithmic expression and hardware implementation.
-		This work bridges that gap with a toolchain for compiling the nested data-parallel language NESL directly to hardware.
-		We leverage the existing front-end of the Village compiler to transform a high-level program into a dataflow graph representation, which we then treat as a blueprint for a hardware accelerator.
-		By mapping graph nodes to a library of Chisel functional units, including multi-cycle floating point operators, and automatically wiring them together, our system automates the hardware design process.
-		This research demonstrates the feasibility of a ``push-button'' approach to hardware generation, enabling programmers to leverage custom accelerators in the Village ecosystem without manual hardware design.
+	Programming specialized hardware accelerators like FPGAs is notoriously difficult, creating a gap between high-level algorithmic expression and hardware implementation.
+	This work bridges that gap with a toolchain for compiling the nested data-parallel language NESL directly to hardware.
+	We leverage the existing front-end of the Village compiler to transform a high-level program into a dataflow graph representation, which we then treat as a blueprint for a hardware accelerator.
+	By mapping graph nodes to a library of Chisel functional units, including multi-cycle floating point operators, and automatically wiring them together, our system automates the hardware design process.
+	This research demonstrates the feasibility of a ``push-button'' approach to hardware generation, enabling programmers to leverage custom accelerators in the Village ecosystem without manual hardware design.
 \end{abstract}
 
 \keywords{Heterogeneity, FPGA, HDL Synthesis, Nested-Data Parallelism}
@@ -201,9 +201,9 @@ We have leveraged the Village compiler pipeline (described in Section~\ref{sec:v
 Our contributions are as follows:
 
 \begin{itemize}
-    \item We present a novel synthesis backend that lowers the Village Intermediate Representation (VIR), a high-level data\-flow graph, into a custom hardware design using Chisel.
-    \item We design and implement a library of reusable hardware functional units in Chisel that correspond to VIR instructions. This library features decoupled interfaces for asynchronous operation and integrated operand buffering.
-    \item We demonstrate the end-to-end correctness of our synthesis pipeline through simulation-based testing on a variety of VIR graphs, validating the translation from the abstract dataflow representation to a functional hardware circuit.
+	\item We present a novel synthesis backend that lowers the Village Intermediate Representation (VIR), a high-level data\-flow graph, into a custom hardware design using Chisel.
+	\item We design and implement a library of reusable hardware functional units in Chisel that correspond to VIR instructions. This library features decoupled interfaces for asynchronous operation and integrated operand buffering.
+	\item We demonstrate the end-to-end correctness of our synthesis pipeline through simulation-based testing on a variety of VIR graphs, validating the translation from the abstract dataflow representation to a functional hardware circuit.
 \end{itemize}
 
 \paragraph{Methodology}
@@ -211,10 +211,11 @@ Our contributions are as follows:
 This work makes extensive use of the Chisel hardware description language (described in Section~\ref{sec:chisel}).
 Testing is performed under simulation using Verilator, driven by the \texttt{scalatest} library.
 Simulation is architecture independent and the testing suite has been run on both ARM and x64 machines.
+The source code for this work is available at \url{https://github.com/vlang-project/village-synthesis}.
 
 \paragraph{Limitations}
 
-Integration into the Village compiler/runtime ecosystem has not yet been completed, so it is not yet possible to fully compile a NESL program to hardware by invoking a single command.
+Integration into the Village compiler and runtime has not yet been completed, so it is not yet possible to fully compile a NESL program to hardware by invoking a single command.
 Additionally, the hardware functional units that have been built for this work have not been manually optimized or internally pipelined.
 Finally, the hardware designs have not yet been run on actual hardware, instead opting for simulation-based testing to stay within time constraints.
 
@@ -231,7 +232,7 @@ Implementing complex algorithms in low-level parallel languages like C or C++ wi
 These languages force the programmer to specify precisely how their algorithm should be mapped onto hardware.
 CUDA is especially troublesome in this regard, exposing every minute facet of a GPU's architecture.
 A programmer may choose to ignore those details and write a direct implementation.
-But, they sacrafice performance compared to a programmer who is willing to optimize to the GPU's microarchitecture and write complex, inscrutable code that obfuscates the underlying algorithm.
+But, they sacrifice performance compared to a programmer who is willing to optimize to the GPU's microarchitecture and write complex, inscrutable code that obfuscates the underlying algorithm.
 
 The other options available to programmers are high-level parallel languages.
 Languages like Chapel \cite{chamberlain2015chapel}, Bend \cite{bend-hvm2}, or NESL \cite{BLELLOCH-NESL-JPDC94, BLELLOCH-NSEL-ICFP96} can ergonomically express parallel algorithms, and their rich semantics provide an intelligent compiler multitudinous opportunities to automatically optimize the implementation.
@@ -249,8 +250,8 @@ Designed in 1992 and implemented in 1996, NESL \cite{BLELLOCH-NESL-JPDC94, BLELL
 This model allows programmers to express the parallelism of their algorithms in terms of applying a function in parallel to a set of values, where those values could themselves be parallel functions.
 It is very flexible and allows the programmer to express all of the parallelism available in their algorithm.
 
-Essentially, NESL is a verson of Standard ML that has been etended with parallel semantics.
-It feathres a parallel map/filter operator and collection types for that operator to consume.
+Essentially, NESL is a version of Standard ML that has been extended to support parallel semantics.
+It feathers a parallel map/filter operator and collection types for that operator to consume.
 Recursion semantics are also updated to allow for parallel recursive calls.
 
 \begin{figure}
@@ -278,8 +279,7 @@ A flat data parallel language would struggle to reveal the parallelism available
 \subsubsection{VCODE}
 \label{sec:vcode}
 
-\ltrs{need to do a language pass on this section}
-Since NESL would be far too complex to execute directly, it is first lowered to VCODE.
+Since NESL would be far too complex to execute directly, it is first lowered to a simpler intermediate representation.
 VCODE uses a relatively small set of instructions that operate on a stack of segmented vectors, which helps simplify an implementation.
 This translation process maps nested parallelism to equivalent flat parallelism.
 This means that parallel recursive calls to parts of a collection, as can be seen in line 8 of Figure~\ref{fig:nesl-sample}, are reduced to a single call over a segmented vector.
@@ -319,7 +319,7 @@ Serving as a direct blueprint for these connections, a dataflow graph maps how t
 This explicit representation of data movement is much easier to translate into a physical circuit than a stack-based representation like VCODE, where dependencies are implicit in the order of push and pop operations on a shared stack.
 
 Figure~\ref{fig:vir-sample} contains many operations that are interdependent.
-We see, for example, that \texttt{vcode\_div\_float} on line 7 must wait for \texttt{vcode\_int\_to\_float} on line 6, which must in tern wait for its parent, and eventually \texttt{vcode\_not\_bool} and \texttt{vcode\_add\_int} on lines 1 and 2, whose operands are supplied immidiately as arguments.
+We see, for example, that \texttt{vcode\_div\_float} on line 7 must wait for \texttt{vcode\_int\_to\_float} on line 6, which must in tern wait for its parent, and eventually \texttt{vcode\_not\_bool} and \texttt{vcode\_add\_int} on lines 1 and 2, whose operands are supplied immediately as arguments.
 For a graphical representation of these dependencies, see Figure~\ref{fig:teaser}.
 
 VIR is a representation that is significantly closer to the physical structure of a hardware circuit, which greatly simplifies the task of synthesizing the high-level algorithm into hardware.
@@ -392,15 +392,11 @@ This complex object-oriented-class-hierarchy-mixin preamble is necessary to allo
 
 \subsection{\texttt{scala-graph} DSL}
 
-\ltrs{Need to rewrite this first sentence.}
-It is not enough to have nodes alone, we must also represent the edges between nodes!
-To accomplish this, we take advantage of the full-featured \texttt{scala-graph} \cite{scala-graph} library.
+We take advantage of the full-featured \texttt{scala-graph} library \cite{scala-graph} to represent the edges between nodes.
 This library allows us to create a typed graph of \texttt{VcodeNode}s that are linked by labeled, directed edges.
-We need the edges to be labeled because some VIR operations are not commutative, meaning the ordering of their inputs matters.
-\ltrs{Need to rewrite next sentence.}
-To encode this ordering, each edge is labeled with the input it should be attached to on the target node.
+Some VIR operations are not commutative, so edges must be labeled to indicate argument order.
 
-These graphs can be imported as JSON or DOT, and they are easily queryable and transformable from within Scala.
+These graphs can be imported and exported as JSON, and they are easily queryable and transformable from within Scala.
 
 \begin{figure}
 	\begin{center}
@@ -431,16 +427,16 @@ Before we can begin the synthesis process, we must validate that the graph is, i
 The properties asserted are as follows:
 
 \begin{itemize}
-\item The graph is acyclic.
-\item The graph is connected.
-\item Each node has the same number of incoming and outgoing edges as it has logical inputs and outputs.
-\item Each node's incoming edges are numbered in increasing order starting at 0.
-\item For each edge, the output type of its source is the same as the input type at its target.
-\item The graph's input and output nodes are numbered in increasing order starting at 0.
+	\item The graph is acyclic.
+	\item The graph is connected.
+	\item Each node has the same number of incoming and outgoing edges as it has logical inputs and outputs.
+	\item Each node's incoming edges are numbered in increasing order starting at 0.
+	\item For each edge, the output type of its source is the same as the input type at its target.
+	\item The graph's input and output nodes are numbered in increasing order starting at 0.
 \end{itemize}
 
 Two properties follow from these assertions.
-First, the set of input nodes and the set of output nodes can each be joined into a continuous sequence. 
+First, the set of input nodes and the set of output nodes can each be joined into a continuous sequence.
 Second, every node is connected to the correct number of inputs and outputs that will supply and consume values of the correct type.
 
 
@@ -480,8 +476,8 @@ Each functional unit extends the \texttt{VillageFunctionalUnit} class and uses I
 \subsection{Simple Unary and Binary Functional Units}
 
 Most VIR instructions are simple unary and binary arithmetic operations.
-These functional units are small enough that they can execute in a single cycle. 
-Once their operands become \texttt{valid}, they can immidiately produce a \texttt{valid} result.
+These functional units are small enough that they can execute in a single cycle.
+Once their operands become \texttt{valid}, they can immediately produce a \texttt{valid} result.
 
 This simplification allows the Scala generator to be parameterized over the operation that needs to be performed.
 The same generator can be used for an integer addition, bitwise XOR, or boolean equality.
@@ -579,13 +575,13 @@ trait HasVillageBinaryIO extends HasVillageIO {
 }
 		\end{lstlisting}
 	\end{center}
-		\caption{A specialization of \texttt{HasVillageIO} that buffers two input operands.}
+	\caption{A specialization of \texttt{HasVillageIO} that buffers two input operands.}
 	\label{fig:village-io-def}
 \end{figure}
 
 While it would be possible to define a new I/O bundle that implements \texttt{HasVillageIO} for every functional unit generator, it is more straightforward to build mix-in traits for the two cases (unary and binary) and reuse them throughout the functional unit library.
 The output bundle is identical in each case, using a single decoupled 64-bit integer.
-\texttt{HasVillageUnaryIO}'s input bundle is comprised of a \texttt{Seq} with a single decoupled 64-bit integer.
+\texttt{HasVillageUnaryIO}'s input bundle contains a \texttt{Seq} with a single decoupled 64-bit integer.
 The binary version's input is the same except it has two such integers as shown in Figure~\ref{fig:village-io-def}.
 
 Note that the inputs are individually decoupled, meaning that the functional unit can indicate, for example, that it is ready to receive an input on connection 0 but not on connection 1.
@@ -619,7 +615,7 @@ for (e <- vir_graph.edges) {
 }
 		\end{lstlisting}
 	\end{center}
-		\caption{Connecting all functional units together.}
+	\caption{Connecting all functional units together.}
 	\label{fig:village-connections}
 \end{figure}
 
@@ -659,7 +655,7 @@ Thus, the results presented here demonstrate the correctness of the graph repres
 \subsection{Testing Methodology}
 
 To minimize debugging surface area, tests are run in simulation using Verilator \cite{verilator}.
-Tests utilize the \texttt{scala-graph} DSL to define small operator graphs. 
+Tests utilize the \texttt{scala-graph} DSL to define small operator graphs.
 Examples include a three-way addition constructed from two adders, or a tree of several boolean logic operations.
 
 These graphs are then passed through the synthesis pipeline, producing a testable accelerator.
@@ -711,7 +707,7 @@ While this work allows hardware accelerators to be generated from abstract VIR i
 \subsection{Simulated Integration}
 
 To prototype the software interface between the accelerator and the Village runtime without needing to debug FPGA issues, an accelerator simulator library can be generated by Verilator.
-\ltrs{Rewrite this next sentence.}
+Then, the runtime can use simple function calls to communicate with the simulated accelerator.
 Then, a simulated version of the accelerator can be interacted with through simple function calls into this generated library.
 This would allow developers to quickly iterate on the runtime-facing API that will eventually be implemented by a custom hardware driver.
 
@@ -727,7 +723,8 @@ A single accelerator is highly unlikely to require all of the space available on
 It should be simple to replicate the accelerator many times to utilize the available area.
 Then, an arbiter can be added to dispatch inputs to the available graph accelerators in a round-robin manner.
 On the other side, outputs could be read into a shared buffer and shipped off the FPGA.
-\ltrs{Need to add a few sentences about how this addes a new dimension of parallelism to the stack.}
+With multiple accelerator instances operating independently, the system can process several distinct computations in parallel, much like a multi-core processor handling different threads.
+As soon as one accelerator begins processing a task, the arbiter can dispatch the next task to an idle instance, enabling a deep pipeline of concurrent execution that dramatically boosts the system's total throughput.
 
 \subsection{Dynamics}
 
@@ -748,8 +745,12 @@ This research is a substantial first step towards integrating dynamically-genera
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{acks}
-		The author thanks Karl Hallsby for his frequent and thoughtful help understanding both Scala's and Chisel's extraordinary compiler and synthesis errors.
-		The author also thanks Prof. Peter Dinda for his guidance and encouragement throughout this project.
+	The author thanks the following people for their contributions to this work and paper:
+	\begin{itemize}
+		\item Jacqueline Egidio, Brad Strand, and Kristina Strand for suggestions to improve the clarity of this manuscript.
+		\item Karl Hallsby for his frequent and thoughtful help understanding both Scala's and Chisel's extraordinary compiler and synthesis errors.
+		\item Prof. Peter Dinda for his guidance and encouragement throughout this project.
+	\end{itemize}
 \end{acks}
 
 
