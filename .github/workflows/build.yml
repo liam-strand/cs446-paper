@@ -1,0 +1,69 @@
+# With some help from: https://gist.github.com/dgerosa/2e1f47a39180f39bde848e38243efa94
+
+name: build
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      # Edit here with the names of your latex file and directory (can use ".")
+      DIR: .
+      FILE: paper
+    steps:
+      - name: Set up Git repository
+        uses: actions/checkout@v6
+      - name: Setup tectonic
+        uses: wtfjoke/setup-tectonic@v4
+      - name: Install dot (cached)
+        uses: awalsh128/cache-apt-pkgs-action@v1
+        with:
+          packages: graphviz
+          version: 1
+      - name: Cache tectonic LaTeX packages
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/Tectonic
+          key: tectonic-${{ runner.os }}-${{ hashFiles('**/*.tex', '**/*.cls', '**/*.bib') }}
+          restore-keys: |
+            tectonic-${{ runner.os }}-
+      - name: LaTeX Build
+        run: tectonic -X compile -Z shell-escape ${{ env.DIR }}/${{ env.FILE }}.tex
+      - name: Stage site
+        run: |
+          mkdir -p github_artifacts
+          mv "${{ env.DIR }}/${{ env.FILE }}.pdf" ./github_artifacts/
+          cat > ./github_artifacts/index.html <<EOF
+          <!DOCTYPE html>
+          <meta charset="utf-8">
+          <meta http-equiv="refresh" content="0; url=./${{ env.FILE }}.pdf">
+          <link rel="canonical" href="./${{ env.FILE }}.pdf">
+          <title>Paper</title>
+          <p>Redirecting to <a href="./${{ env.FILE }}.pdf">the paper PDF</a>…</p>
+          EOF
+      - name: Upload pdf as artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: ./github_artifacts
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
