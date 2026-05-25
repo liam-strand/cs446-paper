@@ -149,30 +149,7 @@
 
 \begin{teaserfigure}
 	\begin{center}
-		\digraph[width=0.95\textwidth]{teaser}{
-		rankdir=LR;
-		ranksep=1.2;
-		node[shape=circle, fixedsize=true, width=1.0];
-		{
-		rank=same;
-		"IN_I(0)";
-		"IN_I(1)";
-		"IN_B(2)";
-		"IN_F(3)";
-		}
-		"IN_I(0)" -> ADD_I [headlabel="0 "];
-		"IN_I(1)" -> ADD_I [headlabel="1 "];
-		"IN_B(2)" -> NOT_B [headlabel="0 "];
-		NOT_B -> B_TO_I [headlabel="0 "];
-		ADD_I -> NOT_I [headlabel="0 "];
-		NOT_I -> MUL_I [headlabel="0 "];
-		B_TO_I -> MUL_I [headlabel="1 "];
-		MUL_I -> I_TO_F [headlabel="0 "];
-		I_TO_F -> DIV_F [headlabel="0 "];
-		"IN_F(3)" -> DIV_F [headlabel="1 "];
-		DIV_F -> F_TO_I [headlabel="0 "]
-		F_TO_I -> "OUT_I(0)" [headlabel="0 "];
-		}
+		\includegraphics[width=0.95\textwidth]{figures/teaser.pdf}
 		\caption{The abstract representation of a VIR operator dataflow subgraph that can now be lowered to hardware.}
 		\label{fig:teaser}
 	\end{center}

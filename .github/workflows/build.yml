@@ -26,11 +26,6 @@ jobs:
         uses: actions/checkout@v6
       - name: Setup tectonic
         uses: wtfjoke/setup-tectonic@v4
-      - name: Install dot (cached)
-        uses: awalsh128/cache-apt-pkgs-action@v1
-        with:
-          packages: graphviz
-          version: 1
       - name: Cache tectonic LaTeX packages
         uses: actions/cache@v5
         with:
@@ -39,7 +34,7 @@ jobs:
           restore-keys: |
             tectonic-${{ runner.os }}-
       - name: LaTeX Build
-        run: tectonic -X compile -Z shell-escape ${{ env.DIR }}/${{ env.FILE }}.tex
+        run: tectonic ${{ env.DIR }}/${{ env.FILE }}.tex -Zshell-escape 
       - name: Stage site
         run: |
           mkdir -p github_artifacts
